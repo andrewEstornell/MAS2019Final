@@ -91,11 +91,23 @@ class Agent:
             self.a.append(self.a_hw)
             self.b.append(self.b_hw)
 
-
     def _ficticious_play(self, network):
         # simulates each agent best responding simoltaniously to the last set of route costs
         best_route = np.argmin(network.costs)
         self.last_route = best_route
+
+    def _update_posterior_belief(self, action, reward):
+        # posterior is (a,b) = (a,b)+(r,1-r)
+        self.a[action] += reward
+        self.b[action] += 1 - reward
+
+    def _pick_thompson_action(self):
+        # theta is our belief over all actions, saying how optimistic we are about each action
+        self.theta = np.random.beta(self.a, self.b)
+        # pick the one with highest posterior p of success
+        self.thompson_action = np.argmax(self.theta)
+
+        return self.thompson_action
 
     
 
