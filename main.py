@@ -1,5 +1,6 @@
 import numpy as np
 import random as rand
+import matplotlib.pyplot as plt
 
 UPPER = 0
 LOWER = 1
@@ -106,6 +107,8 @@ class Agent:
         self.theta = np.random.beta(self.a, self.b)
         # pick the one with highest posterior p of success
         self.thompson_action = np.argmax(self.theta)
+
+        self.last_route = self.thompson_action
 
         return self.thompson_action
 
@@ -215,6 +218,39 @@ def UCB1(network, agents, rounds):
     #    print(agent.avg_route_costs)
     print(agents[0].avg_route_costs)
 
+
+def thompson_sampling(function_network, agents, rounds):
+    total_system_cost = np.zeros(rounds)
+    for round in range(rounds):
+        print("###Round %d ###" % round)
+
+        # pick action based on current belief
+        for agent in agents:
+            action = agent._pick_thompson_action()
+
+        # compute societal outcome once agents commit to actions
+        function_network.calculate_route_costs()
+        print(function_network.costs, "Route Costs")
+        print(function_network.s, "Route Congestion")
+
+        total_system_cost[round] = sum([function_network.costs[agent.last_route] for agent in agents])
+
+        # compute reward update agent beliefs
+        for agent in agents:
+            reward = 0
+            if function_network.costs[agent.last_route] == min(function_network.costs):
+                reward = 1
+
+            agent._update_posterior_belief(agent.last_route, reward)
+
+    plt.plot(list(range(rounds)), total_system_cost)
+    plt.title("Total Societal Cost vs. Iteration")
+    plt.xlabel("Iteration")
+    plt.ylabel("Total Societal Cost (Time on the road)")
+    plt.show()
+
+
+
 def f(x):
     # cost function
     # FEEL FREE TO MAKE NEW COST FUNCTIONS
@@ -222,6 +258,9 @@ def f(x):
 
 
 
+def f_2(x):
+    # cost function
+    return x / 4500
 
 
 
@@ -229,8 +268,8 @@ def f(x):
 if __name__ == "__main__":
     ##########################
     ### HYPER PARAMETERS #####
-    highway = True
-    n = 1000
+    highway = False
+    n = 4000
     rounds = 1000
     epsilon = 0.9
     ############################
@@ -238,7 +277,10 @@ if __name__ == "__main__":
     agents = [Agent(i) for i in range(n)]
     network = Network(highway, f, agents)
 
+    network_2 = Network(highway, f_2, agents)
+
     # Plays each learning stratagy
     #ficticious_play(network, rounds)
     #epsilon_greedy(network, agents, rounds, epsilon)
-    UCB1(network, agents, rounds)
+    #UCB1(network, agents, rounds)
+    thompson_sampling(network, agents, rounds)
