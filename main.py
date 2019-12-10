@@ -72,6 +72,24 @@ class Agent:
         self.num_hw = 0
         self.num = [self.num_up, self.num_lr, self.num_hw]
 
+        # hyper-parameter (alpha) of a beta distribution; 1 indicates uniform prior
+        self.a_up = 1
+        self.a_lr = 1
+        self.a_hw = 1
+
+        # hyper-parameter (beta) of a beta distribution; 1 indicates uniform prior
+        self.b_up = 1
+        self.b_lr = 1
+        self.b_hw = 1
+
+        self.a = [self.a_up, self.a_lr]
+        self.b = [self.b_up, self.b_lr]
+
+        if highway:
+            self.a.append(self.a_hw)
+            self.b.append(self.b_hw)
+
+
     def _ficticious_play(self, network):
         # simulates each agent best responding simoltaniously to the last set of route costs
         best_route = np.argmin(network.costs)
