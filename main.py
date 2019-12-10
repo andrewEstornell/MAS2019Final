@@ -65,6 +65,7 @@ class Agent:
         # path the agent is taking
         self.last_route = None
         self.avg_route_costs = [0, 0, 0]
+        self.raw_route_costs = [0, 0, 0]
         # number of times the agent has taken each path
         self.num_up = 0
         self.num_lr = 0
@@ -76,12 +77,6 @@ class Agent:
         best_route = np.argmin(network.costs)
         self.last_route = best_route
 
-    def epsilon_greedy(self, network, e, rounds):
-        # NOT FINISHED YET
-        if rand.uniform(0, 1) < e:
-            self.last_route = rand.randint(0, len(network.costs) - 1)
-            self.num[self.last_route] += 1
-            cost = network.calculate_route_costs()[self.last_route]
     
 
 
@@ -100,6 +95,26 @@ def ficticious_play(network, rounds):
         print(network.s)
 
 
+def epsilon_greedy(network, agents, rounds, epsilon):
+    for r in range(rounds):
+        for agent in agents:
+            if rand.uniform(0, 1) < epsilon:
+                agent.last_route = np.argmin(agent.avg_route_costs)
+            else:
+                agent.last_route = rand.randint(0, len(network.costs) - 1)
+        network.calculate_route_costs()
+        for agent in agents:
+            agent.raw_route_costs[agent.last_route] += network.costs[agent.last_route]
+            agent.avg_route_costs[agent.last_route] = agent.raw_route_costs[agent.last_route] / float(agent.num[agent.last_route])
+        
+        print("#################")
+        print(r)
+        print(network.costs)
+        print(network.s)
+
+    print("###############")
+    for agent in agents:
+        
 
 
 def f(x):
