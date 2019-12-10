@@ -28,7 +28,9 @@ class Network:
         self.upper_cost = 0
         self.highw_cost = 0
         self.lower_cost = 0
-        self.costs = []
+        self.costs = [0, 0]
+        if self.highway:
+            self.costs.append(0)
 
     # Finds the current cost of every path under the current action choice of agents
     # should be run at the end of every round once ALL agents have selected their path
@@ -98,13 +100,17 @@ def ficticious_play(network, rounds):
 def epsilon_greedy(network, agents, rounds, epsilon):
     for r in range(rounds):
         for agent in agents:
+            # Chooses to explore or exploite with probability epsilon
             if rand.uniform(0, 1) < epsilon:
                 agent.last_route = np.argmin(agent.avg_route_costs)
             else:
                 agent.last_route = rand.randint(0, len(network.costs) - 1)
+        # After all agents have commited to s stratagy, the network costs are updated
         network.calculate_route_costs()
         for agent in agents:
+            # Each agent then gets to see the cost of the route they took, and their understanding of the game is updated accordingly
             agent.raw_route_costs[agent.last_route] += network.costs[agent.last_route]
+            agent.num[agent.last_route] += 1
             agent.avg_route_costs[agent.last_route] = agent.raw_route_costs[agent.last_route] / float(agent.num[agent.last_route])
         
         print("#################")
@@ -112,15 +118,77 @@ def epsilon_greedy(network, agents, rounds, epsilon):
         print(network.costs)
         print(network.s)
 
+    # Afrter all learning rounds are done, the agents commit to a a mixed stratagey and play one more round
     print("###############")
     for agent in agents:
-        
+        t = sum(agent.avg_route_costs)
+        agent_route_likelyhood = [t - c for c in agent.avg_route_costs]
+        t = sum(agent_route_likelyhood)
+        selection = rand.uniform(0, t)
+        if 0 <= selection <= agent_route_likelyhood[0]:
+            agent.last_route = UPPER
+        elif agent_route_likelyhood[0] <= selection <= sum(agent_route_likelyhood[:2]):
+            agent.last_route = LOWER
+        elif sum(agent_route_likelyhood[:2]) <= selection <= t:
+            agent.last_route = HIGHW
+    network.calculate_route_costs()
+    print(network.costs)
+    print(network.s)
 
+    #for agent in agents:
+    #    print(agent.avg_route_costs)
+    print(agents[0].avg_route_costs)
+
+
+def UCB1(network, agents, rounds):
+
+    for r in range(rounds):
+        for agent in agents:
+            # Computes the maximum upper bound on the reward for each agent
+            action_values = [-agent.avg_route_costs[i] + np.sqrt((2*np.log(r))/ (agent.num[i])) for i in range(len(network.costs))]
+            # Plays the action with the greatest upperbound at this round
+            action = np.argmax(action_values)
+            agent.last_route = action
+        # Once all agents have commited to an action, recalculates the costs
+        network.calculate_route_costs()
+
+        # After the network costs are updated, each agent then gets to see the value of the route they took
+        for agent in agents:
+            # Updates the the agent's ideas of the route cost
+            agent.raw_route_costs[agent.last_route] += network.costs[agent.last_route]
+            agent.num[agent.last_route] += 1
+            agent.avg_route_costs[agent.last_route] = agent.raw_route_costs[agent.last_route] / float(agent.num[agent.last_route])
+                    
+        print("#################")
+        print(r)
+        print(network.costs)
+        print(network.s)
+
+    # After all the rounds are over, each agent plays a mixed strategy where the proability of playing a route is porporitonal to -cost
+    print("###############")
+    for agent in agents:
+        t = sum(agent.avg_route_costs)
+        agent_route_likelyhood = [t - c for c in agent.avg_route_costs]
+        t = sum(agent_route_likelyhood)
+        selection = rand.uniform(0, t)
+        if 0 <= selection <= agent_route_likelyhood[0]:
+            agent.last_route = UPPER
+        elif agent_route_likelyhood[0] <= selection <= sum(agent_route_likelyhood[:2]):
+            agent.last_route = LOWER
+        elif sum(agent_route_likelyhood[:2]) <= selection <= t:
+            agent.last_route = HIGHW
+    network.calculate_route_costs()
+    print(network.costs)
+    print(network.s)
+
+    #for agent in agents:
+    #    print(agent.avg_route_costs)
+    print(agents[0].avg_route_costs)
 
 def f(x):
     # cost function
     # FEEL FREE TO MAKE NEW COST FUNCTIONS
-    return x/float(n)
+    return 2*x/float(n)
 
 
 
@@ -132,12 +200,15 @@ if __name__ == "__main__":
     ##########################
     ### HYPER PARAMETERS #####
     highway = True
-    n = 100
-    rounds = 100
+    n = 1000
+    rounds = 1000
+    epsilon = 0.9
     ############################
 
     agents = [Agent(i) for i in range(n)]
     network = Network(highway, f, agents)
 
     # Plays each learning stratagy
-    ficticious_play(network, rounds)
+    #ficticious_play(network, rounds)
+    #epsilon_greedy(network, agents, rounds, epsilon)
+    UCB1(network, agents, rounds)
