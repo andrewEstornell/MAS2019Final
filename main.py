@@ -243,7 +243,7 @@ def thompson_sampling(function_network, agents, rounds):
 
             agent._update_posterior_belief(agent.last_route, reward)
 
-    plt.plot(list(range(rounds)), total_system_cost)
+    plt.plot(list(range(rounds)), total_system_cost, c='black')
     plt.title("Total Societal Cost vs. Iteration")
     plt.xlabel("Iteration")
     plt.ylabel("Total Societal Cost (Time on the road)")
@@ -268,7 +268,7 @@ def f_2(x):
 if __name__ == "__main__":
     ##########################
     ### HYPER PARAMETERS #####
-    highway = False
+    highway = True
     n = 4000
     rounds = 1000
     epsilon = 0.9
