@@ -60,6 +60,10 @@ class Network:
             costs.append(self.highw_cost)
         self.costs = costs
 
+    def total_network_cost(self):
+        return sum(self.s[i]*self.costs[i] for i in range(len(self.costs)))
+
+
 
 class Agent:
 
@@ -92,6 +96,8 @@ class Agent:
             self.a.append(self.a_hw)
             self.b.append(self.b_hw)
 
+
+
     def _ficticious_play(self, network):
         # simulates each agent best responding simoltaniously to the last set of route costs
         best_route = np.argmin(network.costs)
@@ -112,25 +118,61 @@ class Agent:
 
         return self.thompson_action
 
-    
+    def update_averages(self, network, route, full_obs=False):
+        if full_obs:
+            for r in range(len(network.costs)):
+                self.raw_route_costs[r] += network.costs[r]
+                self.num[r] += 1
+                self.avg_route_costs[r] = self.raw_route_costs[r] / float(self.num[r])
+        else:
+            self.raw_route_costs[route] += network.costs[route]
+            self.num[route] += 1
+            self.avg_route_costs[route] = self.raw_route_costs[route] / float(self.num[route])
+
+
+def starting_rounds(network, full_obs=False):
+    agents_starting_order = []
+    for agent in network.agents:
+        arms = [i for i in range(len(network.costs))]
+        rand.shuffle(arms)
+        agents_starting_order.append(arms)
+    for i in range(len(network.costs)):
+        for j in range(len(network.agents)):
+            network.agents[j].last_route = agents_starting_order[j][i]
+        network.calculate_route_costs()
+        for j in range(len(network.agents)):
+            agent = network.agents[j]
+            agent.update_averages(network, agent.last_route, full_obs)
+        print("###################")
+        print(network.s)
+        print(network.costs)
 
 
 
-
-def ficticious_play(network, rounds):
+def ficticious_play(network, rounds, full_obs=False):
     # runs fictiious play for all agents
+    starting_rounds(network, full_obs)
+
+    average_agent_cost_per_round = []
     for r in range(rounds):
+        for agent in network.agents:
+            agent.last_route = np.argmin(agent.avg_route_costs)
         network.calculate_route_costs()
         for agent in network.agents:
-            agent._ficticious_play(network)
+            agent.update_averages(network, agent.last_route, full_obs)
+        average_agent_cost_per_round.append(network.total_network_cost()/float(len(network.agents)))
+        #print("#################")
+        #print(r)
+        #print(network.costs)
+        #print(network.s)
+    return average_agent_cost_per_round
+        
 
-        print("#################")
-        print(r)
-        print(network.costs)
-        print(network.s)
 
+def epsilon_greedy(network, agents, rounds, epsilon, full_obs=False):
+    starting_rounds(network, full_obs)
 
-def epsilon_greedy(network, agents, rounds, epsilon):
+    average_agent_cost_per_round = []
     for r in range(rounds):
         for agent in agents:
             # Chooses to explore or exploite with probability epsilon
@@ -142,16 +184,14 @@ def epsilon_greedy(network, agents, rounds, epsilon):
         network.calculate_route_costs()
         for agent in agents:
             # Each agent then gets to see the cost of the route they took, and their understanding of the game is updated accordingly
-            agent.raw_route_costs[agent.last_route] += network.costs[agent.last_route]
-            agent.num[agent.last_route] += 1
-            agent.avg_route_costs[agent.last_route] = agent.raw_route_costs[agent.last_route] / float(agent.num[agent.last_route])
+            agent.update_averages(network, agent.last_route)
+        average_agent_cost_per_round.append(network.total_network_cost()/float(len(network.agents)))
+    return average_agent_cost_per_round
         
-        print("#################")
-        print(r)
-        print(network.costs)
-        print(network.s)
-
+        
+    """
     # Afrter all learning rounds are done, the agents commit to a a mixed stratagey and play one more round
+    
     print("###############")
     for agent in agents:
         t = sum(agent.avg_route_costs)
@@ -171,6 +211,7 @@ def epsilon_greedy(network, agents, rounds, epsilon):
     #for agent in agents:
     #    print(agent.avg_route_costs)
     print(agents[0].avg_route_costs)
+    """
 
 
 def UCB1(network, agents, rounds):
@@ -254,7 +295,7 @@ def thompson_sampling(function_network, agents, rounds):
 def f(x):
     # cost function
     # FEEL FREE TO MAKE NEW COST FUNCTIONS
-    return 2*x/float(n)
+    return x/float(n)
 
 
 
@@ -270,7 +311,7 @@ if __name__ == "__main__":
     ### HYPER PARAMETERS #####
     highway = True
     n = 4000
-    rounds = 1000
+    rounds = 500
     epsilon = 0.9
     ############################
 
@@ -280,7 +321,15 @@ if __name__ == "__main__":
     network_2 = Network(highway, f_2, agents)
 
     # Plays each learning stratagy
-    #ficticious_play(network, rounds)
-    #epsilon_greedy(network, agents, rounds, epsilon)
-    #UCB1(network, agents, rounds)
-    thompson_sampling(network, agents, rounds)
+    #average_agent_costs = ficticious_play(network, rounds)
+    
+    average_agent_costs = epsilon_greedy(network, agents, rounds, epsilon)
+    #average_agent_costs = UCB1(network, agents, rounds)
+    print(average_agent_costs)
+    
+    
+    
+    
+    
+    
+    #thompson_sampling(network, agents, rounds)
