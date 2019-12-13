@@ -1,6 +1,8 @@
 import numpy as np
 import random as rand
 import matplotlib.pyplot as plt
+import math as math
+
 
 UPPER = 0
 LOWER = 1
@@ -98,10 +100,6 @@ class Agent:
 
 
 
-    def _ficticious_play(self, network):
-        # simulates each agent best responding simoltaniously to the last set of route costs
-        best_route = np.argmin(network.costs)
-        self.last_route = best_route
 
     def _update_posterior_belief(self, action, reward):
         # posterior is (a,b) = (a,b)+(r,1-r)
@@ -143,9 +141,9 @@ def starting_rounds(network, full_obs=False):
         for j in range(len(network.agents)):
             agent = network.agents[j]
             agent.update_averages(network, agent.last_route, full_obs)
-        print("###################")
-        print(network.s)
-        print(network.costs)
+        #print("###################")
+        #print(network.s)
+        #print(network.costs)
 
 
 
@@ -154,9 +152,10 @@ def ficticious_play(network, rounds, full_obs=False):
     starting_rounds(network, full_obs)
 
     average_agent_cost_per_round = []
-    for r in range(rounds):
+    for r in range(3, rounds):
         for agent in network.agents:
-            agent.last_route = np.argmin(agent.avg_route_costs)
+            min_avg_cost = min(agent.avg_route_costs)
+            agent.last_route = rand.sample([i for i in range(len(network.costs)) if agent.avg_route_costs[i] == min_avg_cost], 1)[0]
         network.calculate_route_costs()
         for agent in network.agents:
             agent.update_averages(network, agent.last_route, full_obs)
@@ -166,18 +165,19 @@ def ficticious_play(network, rounds, full_obs=False):
         #print(network.costs)
         #print(network.s)
     return average_agent_cost_per_round
-        
+
 
 
 def epsilon_greedy(network, agents, rounds, epsilon, full_obs=False):
     starting_rounds(network, full_obs)
 
     average_agent_cost_per_round = []
-    for r in range(rounds):
+    for r in range(3, rounds):
         for agent in agents:
             # Chooses to explore or exploite with probability epsilon
             if rand.uniform(0, 1) < epsilon:
-                agent.last_route = np.argmin(agent.avg_route_costs)
+                min_avg_cost = min(agent.avg_route_costs)
+                agent.last_route = rand.sample([i for i in range(len(network.costs)) if agent.avg_route_costs[i] == min_avg_cost], 1)[0]
             else:
                 agent.last_route = rand.randint(0, len(network.costs) - 1)
         # After all agents have commited to s stratagy, the network costs are updated
@@ -214,14 +214,23 @@ def epsilon_greedy(network, agents, rounds, epsilon, full_obs=False):
     """
 
 
-def UCB1(network, agents, rounds):
+def UCB1(network, agents, rounds, full_obs=False):
 
-    for r in range(rounds):
+    starting_rounds(network, full_obs)
+
+    average_agent_cost_per_round = []
+    for r in range(3, rounds):
+        log_r = 2*math.log(r)
         for agent in agents:
             # Computes the maximum upper bound on the reward for each agent
-            action_values = [-agent.avg_route_costs[i] + np.sqrt((2*np.log(r))/ (agent.num[i])) for i in range(len(network.costs))]
+            total = float(sum(agent.avg_route_costs))
+            action_values = [-agent.avg_route_costs[i]/total + np.sqrt(log_r/float(agent.num[i])) for i in range(len(network.costs))]
+
             # Plays the action with the greatest upperbound at this round
-            action = np.argmax(action_values)
+            #print(action_values)
+            max_val = max(action_values)
+            action = rand.sample([i for i in range(len(action_values)) if action_values[i] == max_val], 1)[0]
+            
             agent.last_route = action
         # Once all agents have commited to an action, recalculates the costs
         network.calculate_route_costs()
@@ -229,15 +238,16 @@ def UCB1(network, agents, rounds):
         # After the network costs are updated, each agent then gets to see the value of the route they took
         for agent in agents:
             # Updates the the agent's ideas of the route cost
-            agent.raw_route_costs[agent.last_route] += network.costs[agent.last_route]
-            agent.num[agent.last_route] += 1
-            agent.avg_route_costs[agent.last_route] = agent.raw_route_costs[agent.last_route] / float(agent.num[agent.last_route])
-                    
+            agent.update_averages(network, agent.last_route, full_obs)
+        average_agent_cost_per_round.append(network.total_network_cost()/float(len(network.agents)))
+
         print("#################")
         print(r)
         print(network.costs)
         print(network.s)
+    return average_agent_cost_per_round
 
+    """
     # After all the rounds are over, each agent plays a mixed strategy where the proability of playing a route is porporitonal to -cost
     print("###############")
     for agent in agents:
@@ -258,6 +268,7 @@ def UCB1(network, agents, rounds):
     #for agent in agents:
     #    print(agent.avg_route_costs)
     print(agents[0].avg_route_costs)
+    """
 
 
 def thompson_sampling(function_network, agents, rounds):
@@ -295,13 +306,13 @@ def thompson_sampling(function_network, agents, rounds):
 def f(x):
     # cost function
     # FEEL FREE TO MAKE NEW COST FUNCTIONS
-    return x/float(n)
+    return 1.5*x/float(n)
 
 
 
 def f_2(x):
     # cost function
-    return x / 4500
+    return x / 4500.0
 
 
 
@@ -310,8 +321,8 @@ if __name__ == "__main__":
     ##########################
     ### HYPER PARAMETERS #####
     highway = True
-    n = 4000
-    rounds = 500
+    n = 1000
+    rounds = 1000
     epsilon = 0.9
     ############################
 
@@ -322,9 +333,8 @@ if __name__ == "__main__":
 
     # Plays each learning stratagy
     #average_agent_costs = ficticious_play(network, rounds)
-    
-    average_agent_costs = epsilon_greedy(network, agents, rounds, epsilon)
-    #average_agent_costs = UCB1(network, agents, rounds)
+    #average_agent_costs = epsilon_greedy(network, agents, rounds, epsilon)
+    average_agent_costs = UCB1(network, agents, rounds)
     print(average_agent_costs)
     
     
