@@ -276,19 +276,21 @@ def UCB1(network, agents, rounds, full_obs=False):
 
 def thompson_sampling(function_network, agents, rounds):
     total_system_cost = np.zeros(rounds)
-    for round in range(rounds):
-        print("###Round %d ###" % round)
+    #average_agent_cost_per_round = []
+    for r in range(rounds):
+        print("###Round %d ###" % r)
 
         # pick action based on current belief
         for agent in agents:
-            action = agent._pick_thompson_action()
+            agent._pick_thompson_action()
 
         # compute societal outcome once agents commit to actions
         function_network.calculate_route_costs()
-        print(function_network.costs, "Route Costs")
-        print(function_network.s, "Route Congestion")
+        #print(function_network.costs, "Route Costs")
+        #print(function_network.s, "Route Congestion")
 
-        total_system_cost[round] = sum([function_network.costs[agent.last_route] for agent in agents])
+        total_system_cost[r] = sum([function_network.costs[agent.last_route] for agent in agents])
+        
 
         # compute reward update agent beliefs
         for agent in agents:
@@ -298,11 +300,11 @@ def thompson_sampling(function_network, agents, rounds):
 
             agent._update_posterior_belief(agent.last_route, reward)
 
-    plt.plot(list(range(rounds)), total_system_cost, c='black')
-    plt.title("Total Societal Cost vs. Iteration")
-    plt.xlabel("Iteration")
-    plt.ylabel("Total Societal Cost (Time on the road)")
-    plt.show()
+    #plt.plot(list(range(rounds)), total_system_cost, c='black')
+    #plt.title("Total Societal Cost vs. Iteration")
+    #plt.xlabel("Iteration")
+    #plt.ylabel("Total Societal Cost (Time on the road)")
+    #plt.show()
 
 
 
