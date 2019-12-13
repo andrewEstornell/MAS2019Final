@@ -223,15 +223,18 @@ def UCB1(network, agents, rounds, full_obs=False):
         log_r = 2*math.log(r)
         for agent in agents:
             # Computes the maximum upper bound on the reward for each agent
-            total = float(sum(agent.avg_route_costs))
-            action_values = [-agent.avg_route_costs[i]/total + np.sqrt(log_r/float(agent.num[i])) for i in range(len(network.costs))]
+            
+            action_values = [-agent.avg_route_costs[i] + np.sqrt(log_r/float(agent.num[i])) for i in range(len(network.costs))]
+            #if agent == agents[0]:
+            #    print([np.sqrt(log_r/float(agent.num[i])) for i in range(len(network.costs))])
+            #print(action_values)
 
             # Plays the action with the greatest upperbound at this round
             #print(action_values)
             max_val = max(action_values)
             action = rand.sample([i for i in range(len(action_values)) if action_values[i] == max_val], 1)[0]
-            
             agent.last_route = action
+
         # Once all agents have commited to an action, recalculates the costs
         network.calculate_route_costs()
 
@@ -241,10 +244,10 @@ def UCB1(network, agents, rounds, full_obs=False):
             agent.update_averages(network, agent.last_route, full_obs)
         average_agent_cost_per_round.append(network.total_network_cost()/float(len(network.agents)))
 
-        print("#################")
-        print(r)
-        print(network.costs)
-        print(network.s)
+        #print("#################")
+        #print(r)
+        #print(network.costs)
+        #print(network.s)
     return average_agent_cost_per_round
 
     """
@@ -322,7 +325,7 @@ if __name__ == "__main__":
     ### HYPER PARAMETERS #####
     highway = True
     n = 1000
-    rounds = 1000
+    rounds = 10000
     epsilon = 0.9
     ############################
 
