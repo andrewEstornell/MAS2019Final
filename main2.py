@@ -32,9 +32,27 @@ class Agent:
         self.epsilon = epsilon
         self.a = [1, 1]
         self.b = [1, 1]
+        self.mu_up = 0
+        self.mu_lr = 0
+        self.mu_hw = 0
+
+        # the history of costs agent incurred by taking each route
+        self.cost_history_up = np.array([])
+        self.cost_history_lr = np.array([])
+        self.cost_history_hw = np.array([])
+        self.cost_history = [self.cost_history_up, self.cost_history_lr, self.cost_history_hw]
+
+        self.sigma_up = 1
+        self.sigma_lr = 1
+        self.sigma_hw = 1
+
+        self.mu = [self.mu_up, self.mu_lr]
+        self.sigma = [self.sigma_up, self.sigma_lr]
         if self.highway:
             self.a.append(1)
             self.b.append(1)
+            self.mu.append(self.mu_hw)
+            self.sigma.append(self.sigma_hw)
 
         if self.highway:
             self.N = [0, 0, 0] # number of times the agent has used each route
@@ -73,13 +91,30 @@ class Agent:
         self.route = rand.sample([i for i in range(self.num_routes) if route_value_bounds[i] == max_val], 1)[0]
 
     def thompson_sampling(self):
-        # theta is our belief over all actions, saying how optimistic we are about each action
-        self.theta = np.random.beta(self.a, self.b)
+        # theta is our belief of cost for each action in this case
+        self.theta = np.random.normal(self.mu, self.sigma)
+        # pick the action with lower cost
+        self.route = np.argmin(self.theta)
 
-        # pick the one with highest posterior p of success
-        self.thompson_action = np.argmax(self.theta)
-    
-        self.route = self.thompson_action
+       
+
+    def _update_gaussian_posterior_belief(self, action, cost):
+        """
+        update according to equation 4.3
+        https://djrusso.github.io/RLCourse/papers/TS_Tutorial.pdf
+
+        """
+
+        # keep track of cost history for each route
+        self.cost_history[action] = np.append(self.cost_history[action], cost)
+
+        if len(self.cost_history[action]) > 1:
+            # update the posterior only if there are more than 1 observations
+            if np.var(self.cost_history[action]) > 0:
+                # variance must be positive (in case it is 0, don't update?
+                self.mu[action] = ((1/self.sigma[action])*(self.mu[action]) + (1/np.var(self.cost_history[action]))*(np.log(cost) + np.var(self.cost_history[action])/2)) / ((1 / self.sigma[action]) + (1 / np.var(self.cost_history[action])))
+                self.sigma[action] = 1 / ((1 / self.sigma[action]) + (1 / np.var(self.cost_history[action])))
+
 
     def update(self, full_observation):
         if self.learning_algo in [FICTITIOUS_PLAY, EPSILON_GREEDY, UCB]:
@@ -94,10 +129,14 @@ class Agent:
                 self.avg_route_costs[self.route] = self.raw_route_costs[self.route] / float(self.N[self.route])
 
         elif self.learning_algo == THOMPSON:
-            if self.network.route_costs[self.route] == self.network.min_cost:    
-                self.a[self.route] += 1
+            if full_observation:
+                for route in range(self.num_routes):
+                    self._update_gaussian_posterior_belief(route, self.network.route_costs[route])
+
             else:
-                self.b[self.route] += 1
+                reward = self.network.route_costs[self.route]
+                self._update_gaussian_posterior_belief(self.route, reward)
+
 
         
 
@@ -122,14 +161,14 @@ class Network:
             self.route_costs = [0.0, 0.0]
 
     def calculate_route_costs(self):
-        s_up = sum(1 for agent in self.agents if agent.route == UPPER)
-        s_lr = sum(1 for agent in self.agents if agent.route == LOWER)
-        s_hw = sum(1 for agent in self.agents if agent.route == HIGHW)
+        self.s_up = sum(1 for agent in self.agents if agent.route == UPPER)
+        self.s_lr = sum(1 for agent in self.agents if agent.route == LOWER)
+        self.s_hw = sum(1 for agent in self.agents if agent.route == HIGHW)
 
-        self.route_costs[UPPER] = 1 + self.congestion_function(s_up + s_hw)
-        self.route_costs[LOWER] = 1 + self.congestion_function(s_hw + s_lr)
+        self.route_costs[UPPER] = 1 + self.congestion_function(self.s_up + self.s_hw)
+        self.route_costs[LOWER] = 1 + self.congestion_function(self.s_hw + self.s_lr)
         if self.highway:
-            self.route_costs[HIGHW] = self.congestion_function(s_up + s_hw) + self.congestion_function(s_hw + s_lr)
+            self.route_costs[HIGHW] = self.congestion_function(self.s_up + self.s_hw) + self.congestion_function(self.s_hw + self.s_lr)
         self.min_cost = min(self.route_costs)
         return self.route_costs
 
@@ -224,6 +263,7 @@ def comparison_of_learning_across_all_learning_algorithms(n, num_routes, congest
             agent.decision_function()
         network.calculate_route_costs()
         if r%display_rate == 0:
+            #print(network.s_up, network.s_lr, network.s_hw)
             average_cost_per_agent.append(network.calculate_average_demographic_costs(agents))
         for agent in network.agents:
             agent.update(full_observation)
@@ -232,7 +272,6 @@ def comparison_of_learning_across_all_learning_algorithms(n, num_routes, congest
 
     print("x = ", end=' ')
     print([i for i in range(rounds) if i%display_rate == 0])
-    
 
 def small_number_of_agents_final_policy_comparison(n, num_routes, congestion_function, full_observation, learning_rounds):
     # returns the final policy of an agent when it is the only agent on the road
@@ -251,16 +290,178 @@ def small_number_of_agents_final_policy_comparison(n, num_routes, congestion_fun
        
         for agent in network.agents:
             agent.update(full_observation)
-    ######## PLAYING WITH 
+    ######## PLAYING WITH FINAL POLICY ##################
+    for agent in agents:
+        agent.route = np.argmin(agent.avg_route_costs)
+    network.calculate_route_costs()
+    print("Fictitious play ", n, network.calculate_average_demographic_costs(agents))
+    
+    agents = [Agent(i, num_routes, EPSILON_GREEDY, epsilon) for  i in range(n)]
+    network = Network([agents], congestion_function, num_routes)
+    for agent in agents:
+        agent.network = network
+    
+    ####### LEARNING PROCESS ##########
+    network.starting_rounds(full_observation)
+    
+    for r in range(3, rounds):
+        for agent in network.agents:
+            agent.decision_function()
+        network.calculate_route_costs()
+       
+        for agent in network.agents:
+            agent.update(full_observation)
+    ######## PLAYING WITH FINAL POLICY ##################
+    for agent in agents:
+        agent.route = np.argmin(agent.avg_route_costs)
+    network.calculate_route_costs()
+    print("Epsilon Greedy ", n, network.calculate_average_demographic_costs(agents))
+
+
+    agents = [Agent(i, num_routes, UCB, epsilon) for  i in range(n)]
+    network = Network([agents], congestion_function, num_routes)
+    for agent in agents:
+        agent.network = network
+    
+    ####### LEARNING PROCESS ##########
+    network.starting_rounds(full_observation)
+    
+    for r in range(3, rounds):
+        for agent in network.agents:
+            agent.decision_function()
+        network.calculate_route_costs()
+       
+        for agent in network.agents:
+            agent.update(full_observation)
+    ######## PLAYING WITH FINAL POLICY ##################
+    for agent in agents:
+        agent.route = np.argmin(agent.avg_route_costs)
+    network.calculate_route_costs()
+    print("UCB1 ", n, network.calculate_average_demographic_costs(agents))
+
+    agents = [Agent(i, num_routes, THOMPSON, epsilon) for  i in range(n)]
+    network = Network([agents], congestion_function, num_routes)
+    for agent in agents:
+        agent.network = network
+    
+    ####### LEARNING PROCESS ##########
+    network.starting_rounds(full_observation)
+    
+    for r in range(3, rounds):
+        for agent in network.agents:
+            agent.decision_function()
+        network.calculate_route_costs()
+       
+        for agent in network.agents:
+            agent.update(full_observation)
+    ######## PLAYING WITH FINAL POLICY ##################
+    for agent in agents:
+        agent.route = np.argmin(agent.mu)
+    network.calculate_route_costs()
+    print("Thompson Sampling ", n, network.calculate_average_demographic_costs(agents))
+
+
+
 
 def average_agent_reward_as_a_function_of_n(max_n, num_routes, congestion_function, full_observation, rounds):
-    return 0    
+    n = 1
+    avg_cost = []
+    while n < max_n:
+        agents = [Agent(i, num_routes, FICTITIOUS_PLAY, epsilon) for  i in range(n)]
+        network = Network([agents], congestion_function, num_routes)
+        for agent in agents:
+            agent.network = network
+        network.starting_rounds(full_observation)
+        average_agent_costs = 0
+        for r in range(3, rounds):
+            for agent in network.agents:
+                agent.decision_function()
+            network.calculate_route_costs()
+            average_agent_costs += network.calculate_average_demographic_costs(agents)
+            for agent in network.agents:
+                agent.update(full_observation)
+        average_agent_cost /= float(rounds)
+        avg_cost.append(average_agent_costs)
+    print("fictitious_play =", end=' ')
+    print(avg_cost)
+        
+
+    n = 1
+    avg_cost = []
+    while n < max_n:
+        agents = [Agent(i, num_routes, EPSILON_GREEDY, epsilon) for  i in range(n)]
+        network = Network([agents], congestion_function, num_routes)
+        for agent in agents:
+            agent.network = network
+        network.starting_rounds(full_observation)
+        average_agent_costs = 0
+        for r in range(3, rounds):
+            for agent in network.agents:
+                agent.decision_function()
+            network.calculate_route_costs()
+            average_agent_costs += network.calculate_average_demographic_costs(agents)
+            for agent in network.agents:
+                agent.update(full_observation)
+        average_agent_cost /= float(rounds)
+        avg_cost.append(average_agent_costs)
+    print("epsilon_greedy =", end=' ')
+    print(avg_cost)
+
+    n = 1
+    avg_cost = []
+    while n < max_n:
+        agents = [Agent(i, num_routes, UCB, epsilon) for  i in range(n)]
+        network = Network([agents], congestion_function, num_routes)
+        for agent in agents:
+            agent.network = network
+        network.starting_rounds(full_observation)
+        average_agent_costs = 0
+        for r in range(3, rounds):
+            for agent in network.agents:
+                agent.decision_function()
+            network.calculate_route_costs()
+            average_agent_costs += network.calculate_average_demographic_costs(agents)
+            for agent in network.agents:
+                agent.update(full_observation)
+        average_agent_cost /= float(rounds)
+        avg_cost.append(average_agent_costs)
+    print("UCB1 =", end=' ')
+    print(avg_cost)
+
+    n = 1
+    avg_cost = []
+    while n < max_n:
+        agents = [Agent(i, num_routes, FICTITIOUS_PLAY, epsilon) for  i in range(n)]
+        network = Network([agents], congestion_function, num_routes)
+        for agent in agents:
+            agent.network = network
+        network.starting_rounds(full_observation)
+        average_agent_costs = 0
+        for r in range(3, rounds):
+            for agent in network.agents:
+                agent.decision_function()
+            network.calculate_route_costs()
+            average_agent_costs += network.calculate_average_demographic_costs(agents)
+            for agent in network.agents:
+                agent.update(full_observation)
+        average_agent_cost /= float(rounds)
+        avg_cost.append(average_agent_costs)
+    print("thompson =", end=' ')
+    print(avg_cost)
+
+    n = 1
+    x = []
+    while n < max_n:
+        x.append(n)
+    print("x =", x)
+
+
 
 
 
 
 def f(x):
-    return 0.5*x/n
+    return 1.5*x/n
 
 ###########################
 #### HYPTER PARAMETERS ####
@@ -271,28 +472,22 @@ rounds = 100
 display_rate = 1
 
 num_routes = 3
-full_observation = False
+full_observation = True
 ###########################
 print("exp 1, close up")
 comparison_of_learning_across_all_learning_algorithms(n, num_routes, f, full_observation, rounds, display_rate)
 
-print("#######################")
-print("#######################")
-print("#######################")
-print("#######################")
-print("#######################")
-print("#######################")
 
 ###########################
 #### HYPTER PARAMETERS ####
 ###########################
 epsilon = 0.5      
 n = 1000
-rounds = 50001
-display_rate = 2500
+rounds = 5001
+display_rate = 250
 
 num_routes = 3
-full_observation = False
+full_observation = True
 ###########################
 print("exp 2, stable")
 comparison_of_learning_across_all_learning_algorithms(n, num_routes, f, full_observation, rounds, display_rate)
