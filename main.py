@@ -389,7 +389,7 @@ if __name__ == "__main__":
 
     highway = True
     n = 1000
-    rounds = 200
+    rounds = 400
     display_rate = rounds/100
     epsilon = 0.9
     thompson_noise = 0.5
@@ -405,7 +405,7 @@ if __name__ == "__main__":
     #average_agent_costs = epsilon_greedy(network, agents, rounds, epsilon)
     #average_agent_costs = UCB1(network, agents, rounds, display_rate)
     #average_agent_costs = bernoulli_thompson_sampling(network_2, agents, rounds, thompson_noise)
-    average_agent_costs = gaussian_thompson_sampling(network_2, agents, rounds, full_obs=True)
+    average_agent_costs = gaussian_thompson_sampling(network_2, agents, rounds, full_obs=False)
     print(average_agent_costs)
 
     
