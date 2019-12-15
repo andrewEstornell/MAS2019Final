@@ -75,8 +75,10 @@ class Agent:
     def thompson_sampling(self):
         # theta is our belief over all actions, saying how optimistic we are about each action
         self.theta = np.random.beta(self.a, self.b)
+
         # pick the one with highest posterior p of success
         self.thompson_action = np.argmax(self.theta)
+    
         self.route = self.thompson_action
 
     def update(self, full_observation):
@@ -232,15 +234,38 @@ def comparison_of_learning_across_all_learning_algorithms(n, num_routes, congest
     print([i for i in range(rounds) if i%display_rate == 0])
     
 
+def small_number_of_agents_final_policy_comparison(n, num_routes, congestion_function, full_observation, learning_rounds):
+    # returns the final policy of an agent when it is the only agent on the road
+    agents = [Agent(i, num_routes, FICTITIOUS_PLAY, epsilon) for  i in range(n)]
+    network = Network([agents], congestion_function, num_routes)
+    for agent in agents:
+        agent.network = network
+    
+    ####### LEARNING PROCESS ##########
+    network.starting_rounds(full_observation)
+    
+    for r in range(3, rounds):
+        for agent in network.agents:
+            agent.decision_function()
+        network.calculate_route_costs()
+       
+        for agent in network.agents:
+            agent.update(full_observation)
+    ######## PLAYING WITH 
+
+def average_agent_reward_as_a_function_of_n(max_n, num_routes, congestion_function, full_observation, rounds):
+    return 0    
+
+
 
 
 def f(x):
-    return x/n
+    return 0.5*x/n
 
 ###########################
 #### HYPTER PARAMETERS ####
 ###########################
-epsilon = 0.1       
+epsilon = 0.5      
 n = 1000
 rounds = 100
 display_rate = 1
@@ -248,7 +273,33 @@ display_rate = 1
 num_routes = 3
 full_observation = False
 ###########################
+print("exp 1, close up")
 comparison_of_learning_across_all_learning_algorithms(n, num_routes, f, full_observation, rounds, display_rate)
+
+print("#######################")
+print("#######################")
+print("#######################")
+print("#######################")
+print("#######################")
+print("#######################")
+
+###########################
+#### HYPTER PARAMETERS ####
+###########################
+epsilon = 0.5      
+n = 1000
+rounds = 50001
+display_rate = 2500
+
+num_routes = 3
+full_observation = False
+###########################
+print("exp 2, stable")
+comparison_of_learning_across_all_learning_algorithms(n, num_routes, f, full_observation, rounds, display_rate)
+
+
+
+print("exp 3, average agent reward over all rounds, n changes")
 
 
 
