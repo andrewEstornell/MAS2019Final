@@ -1,6 +1,6 @@
 import numpy as np
 import random as rand
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import math as math
 
 
@@ -65,6 +65,7 @@ class Network:
     def total_network_cost(self):
         return sum(self.s[i]*self.costs[i] for i in range(len(self.costs)))
 
+    def network_cost_for_demographic(self, )
 
 
 class Agent:
@@ -188,33 +189,9 @@ def epsilon_greedy(network, agents, rounds, epsilon, full_obs=False):
         average_agent_cost_per_round.append(network.total_network_cost()/float(len(network.agents)))
     return average_agent_cost_per_round
         
-        
-    """
-    # Afrter all learning rounds are done, the agents commit to a a mixed stratagey and play one more round
-    
-    print("###############")
-    for agent in agents:
-        t = sum(agent.avg_route_costs)
-        agent_route_likelyhood = [t - c for c in agent.avg_route_costs]
-        t = sum(agent_route_likelyhood)
-        selection = rand.uniform(0, t)
-        if 0 <= selection <= agent_route_likelyhood[0]:
-            agent.last_route = UPPER
-        elif agent_route_likelyhood[0] <= selection <= sum(agent_route_likelyhood[:2]):
-            agent.last_route = LOWER
-        elif sum(agent_route_likelyhood[:2]) <= selection <= t:
-            agent.last_route = HIGHW
-    network.calculate_route_costs()
-    print(network.costs)
-    print(network.s)
-
-    #for agent in agents:
-    #    print(agent.avg_route_costs)
-    print(agents[0].avg_route_costs)
-    """
 
 
-def UCB1(network, agents, rounds, full_obs=False):
+def UCB1(network, agents, rounds, display_rate, full_obs=False):
 
     starting_rounds(network, full_obs)
 
@@ -224,9 +201,9 @@ def UCB1(network, agents, rounds, full_obs=False):
         for agent in agents:
             # Computes the maximum upper bound on the reward for each agent
             
-            action_values = [-agent.avg_route_costs[i] + np.sqrt(log_r/float(agent.num[i])) for i in range(len(network.costs))]
-            #if agent == agents[0]:
-            #    print([np.sqrt(log_r/float(agent.num[i])) for i in range(len(network.costs))])
+            total = float(sum(agent.avg_route_costs))
+            action_values = [-agent.avg_route_costs[i]/total + np.sqrt(log_r/float(agent.num[i])) for i in range(len(network.costs))]
+        
             #print(action_values)
 
             # Plays the action with the greatest upperbound at this round
@@ -242,7 +219,10 @@ def UCB1(network, agents, rounds, full_obs=False):
         for agent in agents:
             # Updates the the agent's ideas of the route cost
             agent.update_averages(network, agent.last_route, full_obs)
-        average_agent_cost_per_round.append(network.total_network_cost()/float(len(network.agents)))
+        if r % display_rate == 0:
+            print([np.sqrt(log_r/float(agents[0].num[i])) for i in range(len(network.costs))])
+            print(agents[0].avg_route_costs)
+            average_agent_cost_per_round.append(network.total_network_cost()/float(len(network.agents)))
 
         #print("#################")
         #print(r)
@@ -250,28 +230,6 @@ def UCB1(network, agents, rounds, full_obs=False):
         #print(network.s)
     return average_agent_cost_per_round
 
-    """
-    # After all the rounds are over, each agent plays a mixed strategy where the proability of playing a route is porporitonal to -cost
-    print("###############")
-    for agent in agents:
-        t = sum(agent.avg_route_costs)
-        agent_route_likelyhood = [t - c for c in agent.avg_route_costs]
-        t = sum(agent_route_likelyhood)
-        selection = rand.uniform(0, t)
-        if 0 <= selection <= agent_route_likelyhood[0]:
-            agent.last_route = UPPER
-        elif agent_route_likelyhood[0] <= selection <= sum(agent_route_likelyhood[:2]):
-            agent.last_route = LOWER
-        elif sum(agent_route_likelyhood[:2]) <= selection <= t:
-            agent.last_route = HIGHW
-    network.calculate_route_costs()
-    print(network.costs)
-    print(network.s)
-
-    #for agent in agents:
-    #    print(agent.avg_route_costs)
-    print(agents[0].avg_route_costs)
-    """
 
 
 def thompson_sampling(function_network, agents, rounds):
@@ -328,6 +286,7 @@ if __name__ == "__main__":
     highway = True
     n = 1000
     rounds = 10000
+    display_rate = rounds/100
     epsilon = 0.9
     ############################
 
@@ -339,7 +298,7 @@ if __name__ == "__main__":
     # Plays each learning stratagy
     #average_agent_costs = ficticious_play(network, rounds)
     #average_agent_costs = epsilon_greedy(network, agents, rounds, epsilon)
-    average_agent_costs = UCB1(network, agents, rounds)
+    average_agent_costs = UCB1(network, agents, rounds, display_rate)
     print(average_agent_costs)
     
     
