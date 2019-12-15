@@ -1,6 +1,6 @@
 import numpy as np
 import random as rand
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import math as math
 
 
@@ -65,7 +65,6 @@ class Network:
     def total_network_cost(self):
         return sum(self.s[i]*self.costs[i] for i in range(len(self.costs)))
 
-    def network_cost_for_demographic(self, )
 
 
 class Agent:
@@ -326,7 +325,7 @@ def bernoulli_thompson_sampling(function_network, agents, rounds, noise):
 
 
 
-def gaussian_thompson_sampling(function_network, agents, rounds):
+def gaussian_thompson_sampling(function_network, agents, rounds, full_obs=False):
     """
     based on equation 4.3 in the following tutorial:
     https://djrusso.github.io/RLCourse/papers/TS_Tutorial.pdf
@@ -350,16 +349,21 @@ def gaussian_thompson_sampling(function_network, agents, rounds):
 
         # compute reward update agent beliefs
         for agent in agents:
-            reward = function_network.costs[agent.last_route]
-            agent._update_gaussian_posterior_belief(agent.last_route, reward)
+            if full_obs:
+                for route in range(len(function_network.costs)):
+                    agent._update_gaussian_posterior_belief(route, function_network.costs[route])
+
+            else:
+                reward = function_network.costs[agent.last_route]
+                agent._update_gaussian_posterior_belief(agent.last_route, reward)
 
     average_agent_costs_per_round = total_system_cost / len(agents)
 
-    #plt.plot(list(range(rounds)), average_agent_costs_per_round, c='black')
-    #plt.title("Total Societal Cost vs. Iteration")
-    #plt.xlabel("Iteration")
-    #plt.ylabel("Total Societal Cost (Time on the road)")
-    #plt.show()
+    plt.plot(list(range(rounds)), average_agent_costs_per_round, c='black')
+    plt.title("Total Societal Cost vs. Iteration")
+    plt.xlabel("Iteration")
+    plt.ylabel("Total Societal Cost (Time on the road)")
+    plt.show()
 
     return average_agent_costs_per_round
 
@@ -385,11 +389,8 @@ if __name__ == "__main__":
 
     highway = True
     n = 1000
-    rounds = 10000
+    rounds = 200
     display_rate = rounds/100
-    highway = False
-    n = 4000
-    rounds = 500
     epsilon = 0.9
     thompson_noise = 0.5
     ############################
@@ -402,9 +403,9 @@ if __name__ == "__main__":
     # Plays each learning stratagy
     #average_agent_costs = ficticious_play(network, rounds)
     #average_agent_costs = epsilon_greedy(network, agents, rounds, epsilon)
-    average_agent_costs = UCB1(network, agents, rounds, display_rate)
+    #average_agent_costs = UCB1(network, agents, rounds, display_rate)
     #average_agent_costs = bernoulli_thompson_sampling(network_2, agents, rounds, thompson_noise)
-    #average_agent_costs = gaussian_thompson_sampling(network_2, agents, rounds)
+    average_agent_costs = gaussian_thompson_sampling(network_2, agents, rounds, full_obs=True)
     print(average_agent_costs)
 
     
