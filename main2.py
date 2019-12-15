@@ -86,7 +86,7 @@ class Agent:
 
     def UCB1(self):
         total = float(sum(self.avg_route_costs))
-        route_value_bounds = [-self.avg_route_costs[i]/total + math.sqrt((2*math.log(sum(self.N)))/float(self.N[i])) for i in range(self.num_routes)]
+        route_value_bounds = [ 1 - self.avg_route_costs[i]/total + math.sqrt((2*math.log(sum(self.N)))/float(self.N[i])) for i in range(self.num_routes)]
         max_val = max(route_value_bounds)
         self.route = rand.sample([i for i in range(self.num_routes) if route_value_bounds[i] == max_val], 1)[0]
 
@@ -461,7 +461,7 @@ def average_agent_reward_as_a_function_of_n(max_n, num_routes, congestion_functi
 
 
 def f(x):
-    return 1.5*x/n
+    return 1.3*x/n
 
 ###########################
 #### HYPTER PARAMETERS ####
