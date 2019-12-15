@@ -232,7 +232,7 @@ def UCB1(network, agents, rounds, display_rate, full_obs=False):
 
 
 
-def thompson_sampling(function_network, agents, rounds):
+def thompson_sampling(function_network, agents, rounds, noise):
     total_system_cost = np.zeros(rounds)
     #average_agent_cost_per_round = []
     for r in range(rounds):
@@ -256,13 +256,23 @@ def thompson_sampling(function_network, agents, rounds):
             if function_network.costs[agent.last_route] == min(function_network.costs):
                 reward = 1
 
+            # add noise: with noise probability, the reward changes to the wrong value
+            random_value = rand.random()
+            if random_value < noise:
+                # alternate the reward from zero
+                reward = abs(reward - 1)
+
             agent._update_posterior_belief(agent.last_route, reward)
 
-    #plt.plot(list(range(rounds)), total_system_cost, c='black')
-    #plt.title("Total Societal Cost vs. Iteration")
-    #plt.xlabel("Iteration")
-    #plt.ylabel("Total Societal Cost (Time on the road)")
-    #plt.show()
+    average_agent_costs_per_round = total_system_cost / len(agents)
+
+    plt.plot(list(range(rounds)), average_agent_costs_per_round, c='black')
+    plt.title("Total Societal Cost vs. Iteration")
+    plt.xlabel("Iteration")
+    plt.ylabel("Total Societal Cost (Time on the road)")
+    plt.show()
+
+    return average_agent_costs_per_round
 
 
 
@@ -275,7 +285,7 @@ def f(x):
 
 def f_2(x):
     # cost function
-    return x / 4500.0
+    return x / float(n)
 
 
 
@@ -283,11 +293,18 @@ def f_2(x):
 if __name__ == "__main__":
     ##########################
     ### HYPER PARAMETERS #####
+<<<<<<< HEAD
     highway = True
     n = 1000
     rounds = 10000
     display_rate = rounds/100
+=======
+    highway = False
+    n = 4000
+    rounds = 500
+>>>>>>> 3972c6dd455cdd3883a1058367041cd52aa2a8c4
     epsilon = 0.9
+    thompson_noise = 0.5
     ############################
 
     agents = [Agent(i) for i in range(n)]
@@ -298,12 +315,17 @@ if __name__ == "__main__":
     # Plays each learning stratagy
     #average_agent_costs = ficticious_play(network, rounds)
     #average_agent_costs = epsilon_greedy(network, agents, rounds, epsilon)
+<<<<<<< HEAD
     average_agent_costs = UCB1(network, agents, rounds, display_rate)
     print(average_agent_costs)
+=======
+    #average_agent_costs = UCB1(network, agents, rounds)
+    #print(average_agent_costs)
+>>>>>>> 3972c6dd455cdd3883a1058367041cd52aa2a8c4
     
     
     
     
     
     
-    #thompson_sampling(network, agents, rounds)
+    thompson_sampling(network_2, agents, rounds, thompson_noise)
