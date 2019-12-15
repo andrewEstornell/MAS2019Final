@@ -471,7 +471,7 @@ n = 1000
 rounds = 100
 display_rate = 1
 
-num_routes = 3
+num_routes = 2
 full_observation = True
 ###########################
 print("exp 1, close up")
@@ -486,7 +486,7 @@ n = 1000
 rounds = 5001
 display_rate = 250
 
-num_routes = 3
+num_routes = 2
 full_observation = True
 ###########################
 print("exp 2, stable")
