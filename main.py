@@ -1,6 +1,6 @@
 import numpy as np
 import random as rand
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import math as math
 
 
@@ -65,7 +65,10 @@ class Network:
     def total_network_cost(self):
         return sum(self.s[i]*self.costs[i] for i in range(len(self.costs)))
 
+<<<<<<< HEAD
     
+=======
+>>>>>>> 8c40235353180600bc0f4b3d17368eb58e227cd2
 
 
 class Agent:
@@ -76,6 +79,13 @@ class Agent:
         self.last_route = None
         self.avg_route_costs = [0, 0, 0]
         self.raw_route_costs = [0, 0, 0]
+
+        # the history of costs agent incurred by taking each route
+        self.cost_history_up = np.array([])
+        self.cost_history_lr = np.array([])
+        self.cost_history_hw = np.array([])
+        self.cost_history = [self.cost_history_up, self.cost_history_lr, self.cost_history_hw]
+
         # number of times the agent has taken each path
         self.num_up = 0
         self.num_lr = 0
@@ -95,23 +105,66 @@ class Agent:
         self.a = [self.a_up, self.a_lr]
         self.b = [self.b_up, self.b_lr]
 
+        # parameters for gaussian distribution
+        self.mu_up = 0
+        self.mu_lr = 0
+        self.mu_hw = 0
+
+        self.sigma_up = 1
+        self.sigma_lr = 1
+        self.sigma_hw = 1
+
+        self.mu = [self.mu_up, self.mu_lr]
+        self.sigma = [self.sigma_up, self.sigma_lr]
+
+
         if highway:
             self.a.append(self.a_hw)
             self.b.append(self.b_hw)
 
+            self.mu.append(self.mu_hw)
+            self.sigma.append(self.sigma_hw)
 
 
 
-    def _update_posterior_belief(self, action, reward):
+
+    def _update_beta_posterior_belief(self, action, reward):
         # posterior is (a,b) = (a,b)+(r,1-r)
         self.a[action] += reward
         self.b[action] += 1 - reward
 
-    def _pick_thompson_action(self):
+    def _pick_beta_thompson_action(self):
         # theta is our belief over all actions, saying how optimistic we are about each action
         self.theta = np.random.beta(self.a, self.b)
         # pick the one with highest posterior p of success
         self.thompson_action = np.argmax(self.theta)
+
+        self.last_route = self.thompson_action
+
+        return self.thompson_action
+
+    def _update_gaussian_posterior_belief(self, action, cost):
+        """
+        update according to equation 4.3
+        https://djrusso.github.io/RLCourse/papers/TS_Tutorial.pdf
+
+        """
+
+        # keep track of cost history for each route
+        self.cost_history[action] = np.append(self.cost_history[action], cost)
+
+        if len(self.cost_history[action]) > 1:
+            # update the posterior only if there are more than 1 observations
+            if np.var(self.cost_history[action]) > 0:
+                # variance must be positive (in case it is 0, don't update?
+                self.mu[action] = ((1/self.sigma[action])*(self.mu[action]) + (1/np.var(self.cost_history[action]))*(np.log(cost) + np.var(self.cost_history[action])/2)) / ((1 / self.sigma[action]) + (1 / np.var(self.cost_history[action])))
+                self.sigma[action] = 1 / ((1 / self.sigma[action]) + (1 / np.var(self.cost_history[action])))
+
+    def _pick_gaussian_thompson_action(self):
+        # theta is our belief of cost for each action in this case
+        self.theta = np.random.normal(self.mu, self.sigma)
+        # pick the action with lower cost
+        self.thompson_action = np.argmin(self.theta)
 
         self.last_route = self.thompson_action
 
@@ -232,15 +285,15 @@ def UCB1(network, agents, rounds, display_rate, full_obs=False):
 
 
 
-def thompson_sampling(function_network, agents, rounds, noise):
+def bernoulli_thompson_sampling(function_network, agents, rounds, noise):
     total_system_cost = np.zeros(rounds)
     #average_agent_cost_per_round = []
     for r in range(rounds):
-        print("###Round %d ###" % r)
+        print("### Round %d ###" % r)
 
         # pick action based on current belief
         for agent in agents:
-            agent._pick_thompson_action()
+            agent._pick_beta_thompson_action()
 
         # compute societal outcome once agents commit to actions
         function_network.calculate_route_costs()
@@ -262,7 +315,51 @@ def thompson_sampling(function_network, agents, rounds, noise):
                 # alternate the reward from zero
                 reward = abs(reward - 1)
 
-            agent._update_posterior_belief(agent.last_route, reward)
+            agent._update_beta_posterior_belief(agent.last_route, reward)
+
+    average_agent_costs_per_round = total_system_cost / len(agents)
+
+    plt.plot(list(range(rounds)), average_agent_costs_per_round, c='black')
+    plt.title("Total Societal Cost vs. Iteration")
+    plt.xlabel("Iteration")
+    plt.ylabel("Total Societal Cost (Time on the road)")
+    plt.show()
+
+    return average_agent_costs_per_round
+
+
+
+def gaussian_thompson_sampling(function_network, agents, rounds, full_obs=False):
+    """
+    based on equation 4.3 in the following tutorial:
+    https://djrusso.github.io/RLCourse/papers/TS_Tutorial.pdf
+    """
+
+    total_system_cost = np.zeros(rounds)
+    # average_agent_cost_per_round = []
+    for r in range(rounds):
+        print("### Round %d ###" % r)
+
+        # pick action based on current belief
+        for agent in agents:
+            agent._pick_gaussian_thompson_action()
+
+        # compute societal outcome once agents commit to actions
+        function_network.calculate_route_costs()
+        #print(function_network.costs, "Route Costs")
+        #print(function_network.s, "Route Congestion")
+
+        total_system_cost[r] = sum([function_network.costs[agent.last_route] for agent in agents])
+
+        # compute reward update agent beliefs
+        for agent in agents:
+            if full_obs:
+                for route in range(len(function_network.costs)):
+                    agent._update_gaussian_posterior_belief(route, function_network.costs[route])
+
+            else:
+                reward = function_network.costs[agent.last_route]
+                agent._update_gaussian_posterior_belief(agent.last_route, reward)
 
     average_agent_costs_per_round = total_system_cost / len(agents)
 
@@ -293,9 +390,17 @@ def f_2(x):
 if __name__ == "__main__":
     ##########################
     ### HYPER PARAMETERS #####
+<<<<<<< HEAD
     highway = False
     n = 4000
     rounds = 500
+=======
+
+    highway = True
+    n = 1000
+    rounds = 200
+    display_rate = rounds/100
+>>>>>>> 8c40235353180600bc0f4b3d17368eb58e227cd2
     epsilon = 0.9
     thompson_noise = 0.5
     ############################
@@ -308,12 +413,19 @@ if __name__ == "__main__":
     # Plays each learning stratagy
     #average_agent_costs = ficticious_play(network, rounds)
     #average_agent_costs = epsilon_greedy(network, agents, rounds, epsilon)
+<<<<<<< HEAD
     #average_agent_costs = UCB1(network, agents, rounds)
     #print(average_agent_costs)
+=======
+    #average_agent_costs = UCB1(network, agents, rounds, display_rate)
+    #average_agent_costs = bernoulli_thompson_sampling(network_2, agents, rounds, thompson_noise)
+    average_agent_costs = gaussian_thompson_sampling(network_2, agents, rounds, full_obs=True)
+    print(average_agent_costs)
+
+>>>>>>> 8c40235353180600bc0f4b3d17368eb58e227cd2
     
     
     
     
     
     
-    thompson_sampling(network_2, agents, rounds, thompson_noise)
