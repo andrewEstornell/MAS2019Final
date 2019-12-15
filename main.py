@@ -65,6 +65,10 @@ class Network:
     def total_network_cost(self):
         return sum(self.s[i]*self.costs[i] for i in range(len(self.costs)))
 
+<<<<<<< HEAD
+    
+=======
+>>>>>>> 8c40235353180600bc0f4b3d17368eb58e227cd2
 
 
 class Agent:
@@ -386,11 +390,17 @@ def f_2(x):
 if __name__ == "__main__":
     ##########################
     ### HYPER PARAMETERS #####
+<<<<<<< HEAD
+    highway = False
+    n = 4000
+    rounds = 500
+=======
 
     highway = True
     n = 1000
     rounds = 400
     display_rate = rounds/100
+>>>>>>> 8c40235353180600bc0f4b3d17368eb58e227cd2
     epsilon = 0.9
     thompson_noise = 0.5
     ############################
@@ -403,11 +413,16 @@ if __name__ == "__main__":
     # Plays each learning stratagy
     #average_agent_costs = ficticious_play(network, rounds)
     #average_agent_costs = epsilon_greedy(network, agents, rounds, epsilon)
+<<<<<<< HEAD
+    #average_agent_costs = UCB1(network, agents, rounds)
+    #print(average_agent_costs)
+=======
     #average_agent_costs = UCB1(network, agents, rounds, display_rate)
     #average_agent_costs = bernoulli_thompson_sampling(network_2, agents, rounds, thompson_noise)
     average_agent_costs = gaussian_thompson_sampling(network_2, agents, rounds, full_obs=False)
     print(average_agent_costs)
 
+>>>>>>> 8c40235353180600bc0f4b3d17368eb58e227cd2
     
     
     
