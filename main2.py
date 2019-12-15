@@ -380,7 +380,7 @@ def average_agent_reward_as_a_function_of_n(max_n, num_routes, congestion_functi
             average_agent_costs += network.calculate_average_demographic_costs(agents)
             for agent in network.agents:
                 agent.update(full_observation)
-        average_agent_cost /= float(rounds)
+        average_agent_costs /= float(rounds)
         avg_cost.append(average_agent_costs)
     print("fictitious_play =", end=' ')
     print(avg_cost)
@@ -456,12 +456,13 @@ def average_agent_reward_as_a_function_of_n(max_n, num_routes, congestion_functi
     print("x =", x)
 
 
-
+def average_per_round_regret_of_agents(n, num_routes, congestion_function, full_observations, rounds):
+    
 
 
 
 def f(x):
-    return 1.3*x/n
+    return x/n
 
 ###########################
 #### HYPTER PARAMETERS ####
