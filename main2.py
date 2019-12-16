@@ -283,7 +283,7 @@ def comparison_of_learning_across_all_learning_algorithms(n, num_routes, congest
     plt.xlabel("rounds")
     plt.ylabel("avg cost per agent")
     # plt.show()
-    plt.savefig("figures/exp1.png", dpi=600)
+    plt.savefig("figures/exp1.png", dpi=300)
 
     print("x = ", end=' ')
     print([i for i in range(rounds) if i%display_rate == 0])
