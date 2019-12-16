@@ -282,7 +282,8 @@ def comparison_of_learning_across_all_learning_algorithms(n, num_routes, congest
     plt.title("Avg agent cost with 1000 agents, over 5000 rounds with highway")
     plt.xlabel("rounds")
     plt.ylabel("avg cost per agent")
-    plt.show()
+    # plt.show()
+    plt.savefig("figures/exp1.png", dpi=600)
 
     print("x = ", end=' ')
     print([i for i in range(rounds) if i%display_rate == 0])
@@ -416,7 +417,7 @@ def average_agent_reward_as_a_function_of_n(max_n, num_routes, congestion_functi
             average_agent_costs += network.calculate_average_demographic_costs(agents)
             for agent in network.agents:
                 agent.update(full_observation)
-        average_agent_cost /= float(rounds)
+        average_agent_costs /= float(rounds)
         avg_cost.append(average_agent_costs)
     print("epsilon_greedy =", end=' ')
     print(avg_cost)
@@ -437,7 +438,7 @@ def average_agent_reward_as_a_function_of_n(max_n, num_routes, congestion_functi
             average_agent_costs += network.calculate_average_demographic_costs(agents)
             for agent in network.agents:
                 agent.update(full_observation)
-        average_agent_cost /= float(rounds)
+        average_agent_costs /= float(rounds)
         avg_cost.append(average_agent_costs)
     print("UCB1 =", end=' ')
     print(avg_cost)
@@ -458,7 +459,7 @@ def average_agent_reward_as_a_function_of_n(max_n, num_routes, congestion_functi
             average_agent_costs += network.calculate_average_demographic_costs(agents)
             for agent in network.agents:
                 agent.update(full_observation)
-        average_agent_cost /= float(rounds)
+        average_agent_costs /= float(rounds)
         avg_cost.append(average_agent_costs)
     print("thompson =", end=' ')
     print(avg_cost)
@@ -471,7 +472,7 @@ def average_agent_reward_as_a_function_of_n(max_n, num_routes, congestion_functi
 
 
 def average_per_round_regret_of_agents(n, num_routes, congestion_function, full_observations, rounds):
-    
+    return 0
 
 
 
@@ -486,8 +487,8 @@ n = 1000
 rounds = 100
 display_rate = 1
 
-num_routes = 2
-full_observation = True
+num_routes = 3
+full_observation = False
 ###########################
 print("exp 1, close up")
 comparison_of_learning_across_all_learning_algorithms(n, num_routes, f, full_observation, rounds, display_rate)
@@ -501,8 +502,8 @@ n = 1000
 rounds = 5001
 display_rate = 250
 
-num_routes = 2
-full_observation = True
+num_routes = 3
+full_observation = False
 ###########################
 print("exp 2, stable")
 comparison_of_learning_across_all_learning_algorithms(n, num_routes, f, full_observation, rounds, display_rate)
