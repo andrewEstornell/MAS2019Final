@@ -1,6 +1,7 @@
 import random as rand
 import numpy as np
 import math as math
+import matplotlib.pyplot as plt
 
 UPPER = 0
 LOWER = 1
@@ -202,73 +203,86 @@ class Network:
 
 
 def comparison_of_learning_across_all_learning_algorithms(n, num_routes, congestion_function, full_observation, rounds, display_rate):
+
+    average_cost_per_agent = {}
+
     agents = [Agent(i, num_routes, FICTITIOUS_PLAY, epsilon) for  i in range(n)]
     network = Network([agents], congestion_function, num_routes)
     for agent in agents:
         agent.network = network
     network.starting_rounds(full_observation)
-    average_cost_per_agent = [network.calculate_average_demographic_costs(agents)]
+    average_cost_per_agent["fictitious_play"] = [network.calculate_average_demographic_costs(agents)]
     for r in range(3, rounds):
         for agent in network.agents:
             agent.decision_function()
         network.calculate_route_costs()
         if r%display_rate == 0:
-            average_cost_per_agent.append(network.calculate_average_demographic_costs(agents))
+            average_cost_per_agent["fictitious_play"].append(network.calculate_average_demographic_costs(agents))
         for agent in network.agents:
             agent.update(full_observation)
     print("fictitious_play =", end=' ')
-    print(average_cost_per_agent)
+    print(average_cost_per_agent["fictitious_play"])
 
     agents = [Agent(i, num_routes, EPSILON_GREEDY, epsilon) for  i in range(n)]
     network = Network([agents], congestion_function, num_routes)
     for agent in agents:
         agent.network = network
     network.starting_rounds(full_observation)
-    average_cost_per_agent = [network.calculate_average_demographic_costs(agents)]
+    average_cost_per_agent["epsilon_greedy"] = [network.calculate_average_demographic_costs(agents)]
     for r in range(3, rounds):
         for agent in network.agents:
             agent.decision_function()
         network.calculate_route_costs()
         if r%display_rate == 0:
-            average_cost_per_agent.append(network.calculate_average_demographic_costs(agents))
+            average_cost_per_agent["epsilon_greedy"].append(network.calculate_average_demographic_costs(agents))
         for agent in network.agents:
             agent.update(full_observation)
     print("epsilon_greedy =", end=' ')
-    print(average_cost_per_agent)
+    print(average_cost_per_agent["epsilon_greedy"])
     
     agents = [Agent(i, num_routes, UCB, epsilon) for  i in range(n)]
     network = Network([agents], congestion_function, num_routes)
     for agent in agents:
         agent.network = network
     network.starting_rounds(full_observation)
-    average_cost_per_agent = [network.calculate_average_demographic_costs(agents)]
+    average_cost_per_agent["UCB1"] = [network.calculate_average_demographic_costs(agents)]
     for r in range(3, rounds):
         for agent in network.agents:
             agent.decision_function()
         network.calculate_route_costs()
         if r%display_rate == 0:
-            average_cost_per_agent.append(network.calculate_average_demographic_costs(agents))
+            average_cost_per_agent["UCB1"].append(network.calculate_average_demographic_costs(agents))
         for agent in network.agents:
             agent.update(full_observation)
     print("UCB1 =", end=' ')
-    print(average_cost_per_agent)
+    print(average_cost_per_agent["UCB1"])
     
     agents = [Agent(i, num_routes, THOMPSON, epsilon) for  i in range(n)]
     network = Network([agents], congestion_function, num_routes)
     for agent in agents:
         agent.network = network
-    average_cost_per_agent = []
+    average_cost_per_agent["thompson"] = []
     for r in range(rounds):
         for agent in network.agents:
             agent.decision_function()
         network.calculate_route_costs()
         if r%display_rate == 0:
             #print(network.s_up, network.s_lr, network.s_hw)
-            average_cost_per_agent.append(network.calculate_average_demographic_costs(agents))
+            average_cost_per_agent["thompson"].append(network.calculate_average_demographic_costs(agents))
         for agent in network.agents:
             agent.update(full_observation)
     print("thompson =", end=' ')
-    print(average_cost_per_agent)
+    print(average_cost_per_agent["thompson"])
+
+    plt.plot(average_cost_per_agent["fictitious_play"], color='k', label="fic")
+    plt.plot(average_cost_per_agent["epsilon_greedy"], color='r', label='eps')
+    plt.plot(average_cost_per_agent["UCB1"], color='g', label='ucb')
+    plt.plot(average_cost_per_agent["thompson"], color='b', label='tho')
+    plt.legend()
+    plt.title("Avg agent cost with 1000 agents, over 5000 rounds with highway")
+    plt.xlabel("rounds")
+    plt.ylabel("avg cost per agent")
+    plt.show()
 
     print("x = ", end=' ')
     print([i for i in range(rounds) if i%display_rate == 0])
@@ -472,7 +486,7 @@ n = 1000
 rounds = 100
 display_rate = 1
 
-num_routes = 3
+num_routes = 2
 full_observation = True
 ###########################
 print("exp 1, close up")
@@ -487,7 +501,7 @@ n = 1000
 rounds = 5001
 display_rate = 250
 
-num_routes = 3
+num_routes = 2
 full_observation = True
 ###########################
 print("exp 2, stable")
